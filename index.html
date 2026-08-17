@@ -1,0 +1,67 @@
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="轻量、无依赖的百度搜索建议演示" />
+    <title>百度搜索建议</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="search-card" aria-labelledby="page-title">
+        <div class="brand-mark" aria-hidden="true">搜</div>
+        <p class="eyebrow">SEARCH HELPER</p>
+        <h1 id="page-title">想找点什么？</h1>
+        <p class="intro">输入关键词，从联想中快速抵达你想看的内容。</p>
+
+        <form id="search-form" class="search-form" role="search" novalidate>
+          <div id="combobox" class="combobox">
+            <label class="sr-only" for="search-input">搜索关键词</label>
+            <div class="input-row">
+              <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
+              </svg>
+              <input
+                id="search-input"
+                name="wd"
+                type="search"
+                placeholder="例如：前端开发"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="suggestion-list"
+                aria-expanded="false"
+                aria-haspopup="listbox"
+              />
+              <button id="clear-button" class="clear-button" type="button" aria-label="清空搜索内容" hidden>
+                <span aria-hidden="true">×</span>
+              </button>
+              <button class="submit-button" type="submit">搜索</button>
+            </div>
+
+            <div id="suggestion-panel" class="suggestion-panel" hidden>
+              <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+              <ul id="suggestion-list" role="listbox" aria-label="搜索建议"></ul>
+            </div>
+          </div>
+        </form>
+
+        <p class="keyboard-hint" aria-hidden="true">
+          <kbd>↑</kbd><kbd>↓</kbd> 选择
+          <span></span>
+          <kbd>Enter</kbd> 搜索
+          <span></span>
+          <kbd>Esc</kbd> 关闭
+        </p>
+      </section>
+    </main>
+
+    <noscript>此页面需要启用 JavaScript 才能获取搜索建议。</noscript>
+    <script src="search-suggestions.js" defer></script>
+  </body>
+</html>
+
