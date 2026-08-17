@@ -1,178 +1,118 @@
-# pgtcode
-要实现这个功能，你需要使用百度的搜索建议API。这个API可以根据用户输入的关键词，返回一些相关的搜索建议。你可以在你的网页中添加一个输入框，然后使用JavaScript监听输入框的keyup事件，当用户输入内容时，向百度的搜索建议API发送请求，获取相关的搜索建议，然后将搜索建议显示在一个下拉菜单中。
+# 百度搜索建议
 
-以下是一个简单的实现示例：
+一个不依赖前端框架的百度搜索建议小项目。输入关键词后，页面通过 JSONP 获取联想词，并提供完整的鼠标、键盘和触屏交互。
 
-HTML代码：
+## 功能
 
-复制<input type="text" id="search-input" placeholder="请输入搜索关键词">
+- 输入防抖，减少不必要的网络请求
+- 使用 JSONP 调用百度搜索建议服务
+- 展示加载中、无结果和请求失败状态
+- 鼠标点击或触屏点击建议词
+- `↑` / `↓` 在建议项间循环选择
+- `Enter` 搜索当前输入或选中的建议
+- `Esc` 关闭建议列表
+- 点击搜索区域外部关闭列表
+- 自动忽略过期响应，避免快速输入导致结果错位
+- 响应式布局，适配桌面端与移动端
+- 提供 `label`、`role="combobox"`、`listbox`、`option`、`aria-live` 等无障碍语义
 
-<div id="search-suggestions"></div>
+## 目录结构
 
-JavaScript代码：
+```text
+baidu-search-suggest/
+├── index.html              # 页面结构
+├── style.css               # 页面及响应式样式
+├── search-suggestions.js   # 搜索建议与交互逻辑
+└── README.md               # 项目说明
+```
 
-￼复制const searchInput = document.getElementById('search-input');
+## 本地使用
 
-const searchSuggestions = document.getElementById('search-suggestions');
+推荐通过本地静态服务器预览，而不是直接双击 HTML 文件。
 
-searchInput.addEventListener('keyup', async (event) => {
+任选一种方式：
 
-  const keyword = event.target.value.trim();
+```bash
+# Python
+python -m http.server 8080
 
-  if (keyword) {
+# Node.js（需要已安装 npx）
+npx serve .
+```
 
-    const url = `https://www.baidu.com/sugrec?prod=pc&wd=${encodeURIComponent(keyword)}`;
+然后访问 `http://localhost:8080`。项目没有构建步骤，也不需要安装依赖。
 
-    const response = await fetch(url);
+## 配置
 
-    const data = await response.json();
+可在 `search-suggestions.js` 顶部的 `CONFIG` 中调整：
 
-    if (data.g && data.g.length > 0) {
+| 配置项 | 默认值 | 作用 |
+| --- | ---: | --- |
+| `debounceDelay` | `320` | 停止输入后等待多久再请求，单位为毫秒 |
+| `requestTimeout` | `6000` | JSONP 请求超时时间，单位为毫秒 |
+| `maxSuggestions` | `8` | 最多展示的建议数量 |
 
-      const suggestions = data.g.map(item => item.q);
+搜索目标在 `buildSearchUrl()` 中生成，默认打开百度搜索结果页。
 
-      showSuggestions(suggestions);
+## 部署
 
-    } else {
+这是纯静态项目，可部署到 GitHub Pages、Cloudflare Pages、Vercel 或任意静态文件服务器。
 
-      hideSuggestions();
+### GitHub Pages
 
-    }
+1. 将本目录内的文件提交到 GitHub 仓库。
+2. 打开仓库的 **Settings → Pages**。
+3. 在 **Build and deployment** 中选择 **Deploy from a branch**。
+4. 选择目标分支（通常为 `main`）和目录（通常为 `/root`），保存。
+5. 等待 GitHub 生成访问地址。
 
-  } else {
+如果项目位于仓库子目录，请将该子目录作为站点发布源，或把四个文件移到发布目录中。代码使用相对路径，不需要修改资源地址。
 
-    hideSuggestions();
+## 为什么使用 JSONP，而不是 `fetch`
 
-  }
+浏览器的同源策略会限制网页直接读取其他域名的响应。百度搜索建议服务通常不会为任意网页返回允许跨域读取的 CORS 响应，因此直接使用 `fetch()` 可能被浏览器拦截。
 
-});
+JSONP 利用了 `<script>` 可以加载跨域脚本的特性：页面生成一个唯一的全局回调名，并把它随请求传给服务端；服务端返回一次对该回调的调用，页面收到数据后立即移除脚本标签和全局回调。JSONP 只支持 `GET`，也不像 CORS 那样具备细粒度的跨域权限控制。
 
-function showSuggestions(suggestions) {
+在可控的生产系统中，更推荐由自己的后端代理第三方请求，并在后端做缓存、限流、校验和监控。
 
-  searchSuggestions.innerHTML = '';
+## 安全注意事项
 
-  const ul = document.createElement('ul');
+- JSONP 返回的是可执行脚本，而不是普通 JSON。只有在信任服务提供方时才应使用。
+- 本项目只把建议词写入 `textContent`，不把接口内容拼接成 HTML，以降低 DOM 注入风险。
+- 用户输入通过 `URLSearchParams` 编码后才进入 URL。
+- 每次请求都会使用独立回调名，并在成功、超时或失败后清理回调与脚本节点。
+- 若站点启用了内容安全策略（CSP），需在 `script-src` 中明确允许 `https://suggestion.baidu.com`；这会扩大脚本信任范围，请先评估风险。
+- 不要在前端代码中存放 API 密钥、令牌或任何隐私数据。
+- 第三方接口可能记录请求关键词；处理敏感内容前应向用户说明隐私影响。
 
-  suggestions.forEach(suggestion => {
+## 常见问题
 
-    const li = document.createElement('li');
+### 一直显示“暂时无法获取建议”
 
-    li.textContent = suggestion;
+请检查网络、浏览器控制台、广告拦截扩展和站点 CSP。公司或校园网络也可能屏蔽百度建议域名。第三方接口的地址、参数或可用性将来亦可能发生变化。
 
-    ul.appendChild(li);
+### 为什么直接打开 `index.html` 时表现异常
 
-  });
+某些浏览器会限制 `file://` 页面加载网络资源。使用上文的本地静态服务器即可避免这类问题。
 
-  searchSuggestions.appendChild(ul);
+### 输入后没有建议，但可以正常搜索
 
-  searchSuggestions.style.display = 'block';
+接口可能没有返回匹配项，或网络请求已超时。搜索按钮和 `Enter` 搜索不依赖建议接口，仍可正常使用。
 
-}
+### 中文出现乱码
 
-function hideSuggestions() {
+百度建议接口可能返回 GBK 编码内容。脚本节点已声明 `charset="gbk"`；如果你的部署平台重写了响应头或字符集，请检查其代理和缓存配置。
 
-  searchSuggestions.innerHTML = '';
+### 可以更换搜索引擎吗
 
-  searchSuggestions.style.display = 'none';
+可以。需要同时替换 `createJsonpRequest()` 中的建议接口及 `buildSearchUrl()` 中的结果页地址，并根据新接口的数据结构调整 `extractSuggestions()`。
 
-}
+## 浏览器支持
 
-这段代码会监听输入框的keyup事件，当用户输入内容时，向百度的搜索建议API发送请求，获取相关的搜索建议。如果有搜索建议，就将它们显示在一个下拉菜单中。如果没有搜索建议，就隐藏下拉菜单。
+支持近年的 Chrome、Edge、Firefox 和 Safari。项目使用现代 JavaScript 语法，不面向 Internet Explorer。
 
-请告诉我如何命名该javascipt文件以及如何放置它
+## 说明
 
-你可以将这个JavaScript文件命名为search-suggestions.js，然后将它放在你网页的根目录下。在你的HTML文件中，你需要在<head>标签中添加以下代码来引入这个JavaScript文件：
+本项目用于前端交互和 JSONP 技术示例，与百度无隶属或合作关系。“百度”是其权利人的商标；第三方服务的可用性与使用规则以服务提供方为准。
 
-复制<script src="search-suggestions.js"></script>
-
-这样，当你的网页加载时，就会自动加载这个JavaScript文件，并执行其中的代码。
-
-  
-  
-  要实现这个功能，你需要使用百度的搜索建议API。这个API可以根据用户输入的关键词，返回一些相关的搜索建议。你可以在你的网页中添加一个输入框，然后使用JavaScript监听输入框的keyup事件，当用户输入内容时，向百度的搜索建议API发送请求，获取相关的搜索建议，然后将搜索建议显示在一个下拉菜单中。
-
-以下是一个简单的实现示例：
-
-HTML代码：
-
-￼复制<input type="text" id="search-input" placeholder="请输入搜索关键词">
-
-<div id="search-suggestions"></div>
-
-JavaScript代码：
-
-￼复制const searchInput = document.getElementById('search-input');
-
-const searchSuggestions = document.getElementById('search-suggestions');
-
-searchInput.addEventListener('keyup', async (event) => {
-
-  const keyword = event.target.value.trim();
-
-  if (keyword) {
-
-    const url = `https://www.baidu.com/sugrec?prod=pc&wd=${encodeURIComponent(keyword)}`;
-
-    const response = await fetch(url);
-
-    const data = await response.json();
-
-    if (data.g && data.g.length > 0) {
-
-      const suggestions = data.g.map(item => item.q);
-
-      showSuggestions(suggestions);
-
-    } else {
-
-      hideSuggestions();
-
-    }
-
-  } else {
-
-    hideSuggestions();
-
-  }
-
-});
-
-function showSuggestions(suggestions) {
-
-  searchSuggestions.innerHTML = '';
-
-  const ul = document.createElement('ul');
-
-  suggestions.forEach(suggestion => {
-
-    const li = document.createElement('li');
-
-    li.textContent = suggestion;
-
-    ul.appendChild(li);
-
-  });
-
-  searchSuggestions.appendChild(ul);
-
-  searchSuggestions.style.display = 'block';
-
-}
-
-function hideSuggestions() {
-
-  searchSuggestions.innerHTML = '';
-
-  searchSuggestions.style.display = 'none';
-
-}
-
-这段代码会监听输入框的keyup事件，当用户输入内容时，向百度的搜索建议API发送请求，获取相关的搜索建议。如果有搜索建议，就将它们显示在一个下拉菜单中。如果没有搜索建议，就隐藏下拉菜单。
-
-请告诉我如何命名该javascipt文件以及如何放置它
-
-你可以将这个JavaScript文件命名为search-suggestions.js，然后将它放在你网页的根目录下。在你的HTML文件中，你需要在<head>标签中添加以下代码来引入这个JavaScript文件：
-
-￼复制<script src="search-suggestions.js"></script>
-
-这样，当你的网页加载时，就会自动加载这个JavaScript文件，并执行其中的代码。
